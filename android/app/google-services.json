@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "16381110793",
+    "project_id": "ecommerce-kushal-2026",
+    "storage_bucket": "ecommerce-kushal-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:16381110793:android:5929d5f1f8e9448f14e6d8",
+        "android_client_info": {
+          "package_name": "com.example.ecommerce_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHzOPoXyL0qaRwxECy5B2HE4ExJt1qR1w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
