@@ -250,7 +250,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _FeatureItem('Notes', Icons.sticky_note_2_rounded, AppColors.notes, () => _navigateTo(context, const NotesScreen())),
       _FeatureItem('To-Do', Icons.checklist_rounded, AppColors.todo, () => _navigateTo(context, const TodoScreen())),
       _FeatureItem('Expenses', Icons.account_balance_wallet_rounded, AppColors.expense, () => _navigateTo(context, const ExpenseScreen())),
-      _FeatureItem('Attendance', Icons.bar_chart_rounded, AppColors.attendance, () => _navigateTo(context, const AttendanceScreen())),
     ];
 
     return Padding(
@@ -376,7 +375,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _FeatureItem('Notes', Icons.sticky_note_2_rounded, AppColors.notes, () => _navigateTo(context, const NotesScreen())),
     _FeatureItem('To-Do', Icons.checklist_rounded, AppColors.todo, () => _navigateTo(context, const TodoScreen())),
     _FeatureItem('Expense Tracker', Icons.account_balance_wallet_rounded, AppColors.expense, () => _navigateTo(context, const ExpenseScreen())),
-    _FeatureItem('Attendance Calculator', Icons.bar_chart_rounded, AppColors.attendance, () => _navigateTo(context, const AttendanceScreen())),
     _FeatureItem('Date Converter', Icons.calendar_month_rounded, AppColors.dateConverter, () => _navigateTo(context, const DateConverterScreen())),
     _FeatureItem('Stopwatch', Icons.timer_rounded, AppColors.stopwatch, () => _navigateTo(context, const StopwatchScreen())),
     _FeatureItem('Timer', Icons.hourglass_bottom_rounded, AppColors.timer, () => _navigateTo(context, const TimerScreen())),
