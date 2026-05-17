@@ -1,0 +1,403 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../../core/theme/app_theme.dart';
+import '../../providers/notes_provider.dart';
+import '../../providers/todo_provider.dart';
+import '../../providers/expense_provider.dart';
+import '../../widgets/feature_card.dart';
+import '../notes/notes_screen.dart';
+import '../todo/todo_screen.dart';
+import '../expense/expense_screen.dart';
+import '../attendance/attendance_screen.dart';
+import '../utilities/utilities_hub_screen.dart';
+import '../utilities/date_converter_screen.dart';
+import '../utilities/stopwatch_screen.dart';
+import '../utilities/timer_screen.dart';
+import '../unit_converter/unit_converter_screen.dart';
+import '../calculator/calculator_screen.dart';
+import '../qr/qr_screen.dart';
+import '../clipboard/clipboard_screen.dart';
+import '../password_vault/vault_screen.dart';
+import '../pdf_tools/pdf_tools_screen.dart';
+import '../settings/settings_screen.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _searchController = TextEditingController();
+  bool _isSearching = false;
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          _buildAppBar(context, isDark, cs),
+          if (_isSearching && _searchQuery.isNotEmpty)
+            _buildSearchResults(context)
+          else ...[
+            SliverToBoxAdapter(child: _buildStatsRow(context)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: SectionHeader(
+                  title: 'Productivity',
+                  emoji: '📋',
+                  accentColor: AppColors.productivity,
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(child: _buildProductivityGrid(context)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: SectionHeader(
+                  title: 'Utilities',
+                  emoji: '🔧',
+                  accentColor: AppColors.utilities,
+                  onSeeAll: () => _navigateTo(context, const UtilitiesHubScreen()),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(child: _buildUtilitiesRow(context)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: SectionHeader(
+                  title: 'Documents',
+                  emoji: '📁',
+                  accentColor: AppColors.documents,
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(child: _buildDocumentsGrid(context)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: SectionHeader(
+                  title: 'Security',
+                  emoji: '🔒',
+                  accentColor: AppColors.security,
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(child: _buildSecurityCard(context)),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  SliverAppBar _buildAppBar(BuildContext context, bool isDark, ColorScheme cs) {
+    return SliverAppBar(
+      floating: true,
+      snap: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      title: _isSearching
+          ? TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'Search features...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: isDark ? const Color(0xFF1C1F2A) : Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  onPressed: () {
+                    setState(() {
+                      _isSearching = false;
+                      _searchQuery = '';
+                      _searchController.clear();
+                    });
+                  },
+                ),
+              ),
+              onChanged: (v) => setState(() => _searchQuery = v),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _greeting(),
+                  style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.5)),
+                ),
+                const Text(
+                  'All in One',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                ),
+              ],
+            ),
+      actions: [
+        if (!_isSearching)
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            onPressed: () => setState(() => _isSearching = true),
+          ),
+        IconButton(
+          icon: CircleAvatar(
+            radius: 16,
+            backgroundColor: cs.primaryContainer,
+            child: Icon(Icons.person_rounded, size: 18, color: cs.onPrimaryContainer),
+          ),
+          onPressed: () => _navigateTo(context, const SettingsScreen()),
+        ),
+        const SizedBox(width: 4),
+      ],
+    );
+  }
+
+  Widget _buildStatsRow(BuildContext context) {
+    final notes = context.watch<NotesProvider>().notes.length;
+    final tasks = context.watch<TodoProvider>().pending.length;
+    final today = context.watch<ExpenseProvider>().totalToday;
+    final now = DateTime.now();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF5C6BC0),
+              const Color(0xFF3949AB),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    DateFormat('EEEE, MMM d').format(now),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    DateFormat('h:mm a').format(now),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildStatChip(Icons.sticky_note_2_outlined, '$notes', 'Notes'),
+            const SizedBox(width: 8),
+            _buildStatChip(Icons.task_alt_rounded, '$tasks', 'Tasks'),
+            const SizedBox(width: 8),
+            _buildStatChip(Icons.account_balance_wallet_outlined, 'Rs${today.toInt()}', 'Today'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatChip(IconData icon, String value, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 9)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductivityGrid(BuildContext context) {
+    final items = [
+      _FeatureItem('Notes', Icons.sticky_note_2_rounded, AppColors.notes, () => _navigateTo(context, const NotesScreen())),
+      _FeatureItem('To-Do', Icons.checklist_rounded, AppColors.todo, () => _navigateTo(context, const TodoScreen())),
+      _FeatureItem('Expenses', Icons.account_balance_wallet_rounded, AppColors.expense, () => _navigateTo(context, const ExpenseScreen())),
+      _FeatureItem('Attendance', Icons.bar_chart_rounded, AppColors.attendance, () => _navigateTo(context, const AttendanceScreen())),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.3,
+        children: items.map((item) => FeatureCard(
+          label: item.label,
+          icon: item.icon,
+          color: item.color,
+          onTap: item.onTap,
+        )).toList(),
+      ),
+    );
+  }
+
+  Widget _buildUtilitiesRow(BuildContext context) {
+    final items = [
+      _FeatureItem('Date\nConverter', Icons.calendar_month_rounded, AppColors.dateConverter, () => _navigateTo(context, const DateConverterScreen())),
+      _FeatureItem('Stopwatch', Icons.timer_rounded, AppColors.stopwatch, () => _navigateTo(context, const StopwatchScreen())),
+      _FeatureItem('Timer', Icons.hourglass_bottom_rounded, AppColors.timer, () => _navigateTo(context, const TimerScreen())),
+      _FeatureItem('Unit\nConverter', Icons.swap_horiz_rounded, AppColors.unitConverter, () => _navigateTo(context, const UnitConverterScreen())),
+      _FeatureItem('Calculator', Icons.calculate_rounded, AppColors.calculator, () => _navigateTo(context, const CalculatorScreen())),
+    ];
+
+    return SizedBox(
+      height: 110,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        itemCount: items.length,
+        itemBuilder: (context, i) => Padding(
+          padding: EdgeInsets.only(right: i < items.length - 1 ? 10 : 0),
+          child: SizedBox(
+            width: 90,
+            child: FeatureCard(
+              label: items[i].label,
+              icon: items[i].icon,
+              color: items[i].color,
+              onTap: items[i].onTap,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDocumentsGrid(BuildContext context) {
+    final items = [
+      _FeatureItem('QR Scanner\n& Generator', Icons.qr_code_2_rounded, AppColors.qr, () => _navigateTo(context, const QrScreen())),
+      _FeatureItem('PDF Tools', Icons.picture_as_pdf_rounded, AppColors.pdf, () => _navigateTo(context, const PdfToolsScreen())),
+      _FeatureItem('Clipboard\nHistory', Icons.content_paste_rounded, AppColors.clipboard, () => _navigateTo(context, const ClipboardScreen())),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: Row(
+        children: items.asMap().entries.map((entry) {
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: entry.key < items.length - 1 ? 10 : 0),
+              child: AspectRatio(
+                aspectRatio: 0.95,
+                child: FeatureCard(
+                  label: entry.value.label,
+                  icon: entry.value.icon,
+                  color: entry.value.color,
+                  onTap: entry.value.onTap,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildSecurityCard(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      child: FeatureCard(
+        label: 'Password Vault',
+        icon: Icons.lock_rounded,
+        color: AppColors.vault,
+        subtitle: 'Store passwords securely with PIN',
+        onTap: () => _navigateTo(context, const VaultScreen()),
+        compact: true,
+      ),
+    );
+  }
+
+  Widget _buildSearchResults(BuildContext context) {
+    final allItems = _allFeatures(context);
+    final q = _searchQuery.toLowerCase();
+    final filtered = allItems.where((item) => item.label.toLowerCase().contains(q)).toList();
+
+    return SliverPadding(
+      padding: const EdgeInsets.all(20),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, i) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: FeatureCard(
+              label: filtered[i].label,
+              icon: filtered[i].icon,
+              color: filtered[i].color,
+              onTap: filtered[i].onTap,
+              compact: true,
+            ),
+          ),
+          childCount: filtered.length,
+        ),
+      ),
+    );
+  }
+
+  List<_FeatureItem> _allFeatures(BuildContext context) => [
+    _FeatureItem('Notes', Icons.sticky_note_2_rounded, AppColors.notes, () => _navigateTo(context, const NotesScreen())),
+    _FeatureItem('To-Do', Icons.checklist_rounded, AppColors.todo, () => _navigateTo(context, const TodoScreen())),
+    _FeatureItem('Expense Tracker', Icons.account_balance_wallet_rounded, AppColors.expense, () => _navigateTo(context, const ExpenseScreen())),
+    _FeatureItem('Attendance Calculator', Icons.bar_chart_rounded, AppColors.attendance, () => _navigateTo(context, const AttendanceScreen())),
+    _FeatureItem('Date Converter', Icons.calendar_month_rounded, AppColors.dateConverter, () => _navigateTo(context, const DateConverterScreen())),
+    _FeatureItem('Stopwatch', Icons.timer_rounded, AppColors.stopwatch, () => _navigateTo(context, const StopwatchScreen())),
+    _FeatureItem('Timer', Icons.hourglass_bottom_rounded, AppColors.timer, () => _navigateTo(context, const TimerScreen())),
+    _FeatureItem('Unit Converter', Icons.swap_horiz_rounded, AppColors.unitConverter, () => _navigateTo(context, const UnitConverterScreen())),
+    _FeatureItem('Calculator', Icons.calculate_rounded, AppColors.calculator, () => _navigateTo(context, const CalculatorScreen())),
+    _FeatureItem('QR Scanner & Generator', Icons.qr_code_2_rounded, AppColors.qr, () => _navigateTo(context, const QrScreen())),
+    _FeatureItem('PDF Tools', Icons.picture_as_pdf_rounded, AppColors.pdf, () => _navigateTo(context, const PdfToolsScreen())),
+    _FeatureItem('Clipboard History', Icons.content_paste_rounded, AppColors.clipboard, () => _navigateTo(context, const ClipboardScreen())),
+    _FeatureItem('Password Vault', Icons.lock_rounded, AppColors.vault, () => _navigateTo(context, const VaultScreen())),
+  ];
+
+  void _navigateTo(BuildContext context, Widget screen) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
+}
+
+class _FeatureItem {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  _FeatureItem(this.label, this.icon, this.color, this.onTap);
+}
