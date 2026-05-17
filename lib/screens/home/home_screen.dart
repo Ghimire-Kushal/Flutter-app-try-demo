@@ -283,15 +283,15 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return SizedBox(
-      height: 110,
+      height: 128,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
         itemCount: items.length,
         itemBuilder: (context, i) => Padding(
           padding: EdgeInsets.only(right: i < items.length - 1 ? 10 : 0),
           child: SizedBox(
-            width: 90,
+            width: 96,
             child: FeatureCard(
               label: items[i].label,
               icon: items[i].icon,
