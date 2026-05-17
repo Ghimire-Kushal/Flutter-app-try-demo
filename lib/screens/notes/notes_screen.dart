@@ -14,11 +14,6 @@ class NotesScreen extends StatefulWidget {
 class _NotesScreenState extends State<NotesScreen> {
   String _search = '';
 
-  static const _colors = [
-    '#FFFFFF', '#FFF9C4', '#F8BBD9', '#C8E6C9',
-    '#BBDEFB', '#FFE0B2', '#E1BEE7', '#B2EBF2',
-  ];
-
   Color _hex(String hex) {
     final h = hex.replaceFirst('#', '');
     return Color(int.parse('FF$h', radix: 16));

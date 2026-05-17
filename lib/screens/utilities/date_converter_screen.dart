@@ -24,7 +24,7 @@ class _DateConverterScreenState extends State<DateConverterScreen>
   DateTime? _adResult;
 
   // Current time display
-  NepaliDateTime get _currentNepali => NepaliDateTime.fromDateTime(DateTime.now());
+  NepaliDateTime get _currentNepali => DateTime.now().toNepaliDateTime();
 
   @override
   void initState() {
@@ -40,7 +40,7 @@ class _DateConverterScreenState extends State<DateConverterScreen>
   }
 
   void _convertAdToBs() {
-    setState(() => _bsResult = NepaliDateTime.fromDateTime(_adDate));
+    setState(() => _bsResult = _adDate.toNepaliDateTime());
   }
 
   void _convertBsToAd() {

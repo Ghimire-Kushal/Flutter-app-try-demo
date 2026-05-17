@@ -15,7 +15,6 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
   late final TextEditingController _titleCtrl;
   late final TextEditingController _contentCtrl;
   late String _colorHex;
-  bool _isDirty = false;
 
   static const _colors = [
     '#FFFFFF', '#FFF9C4', '#F8BBD9', '#C8E6C9',
@@ -104,7 +103,7 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
               ),
-              onChanged: (_) => _isDirty = true,
+              onChanged: (_) {},
             ),
             Expanded(
               child: TextField(
@@ -120,7 +119,7 @@ class _NoteEditScreenState extends State<NoteEditScreen> {
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
                 ),
-                onChanged: (_) => _isDirty = true,
+                onChanged: (_) {},
               ),
             ),
           ],

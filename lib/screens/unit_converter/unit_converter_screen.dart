@@ -218,12 +218,15 @@ class _UnitConverterScreenState extends State<UnitConverterScreen> {
       children: [
         Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
         const SizedBox(height: 6),
-        DropdownButtonFormField<String>(
-          value: value,
+        InputDecorator(
           decoration: const InputDecoration(),
-          items: items.map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 13)))).toList(),
-          onChanged: onChanged,
-          isExpanded: true,
+          child: DropdownButton<String>(
+            value: value,
+            isExpanded: true,
+            underline: const SizedBox(),
+            items: items.map((u) => DropdownMenuItem(value: u, child: Text(u, style: const TextStyle(fontSize: 13)))).toList(),
+            onChanged: onChanged,
+          ),
         ),
       ],
     );

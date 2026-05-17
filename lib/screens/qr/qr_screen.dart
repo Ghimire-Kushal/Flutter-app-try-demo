@@ -275,8 +275,7 @@ class _QrScreenState extends State<QrScreen> with SingleTickerProviderStateMixin
 
   Widget _corner({bool flip = false, bool bottom = false}) {
     return Transform(
-      transform: Matrix4.identity()
-        ..scale(flip ? -1.0 : 1.0, bottom ? -1.0 : 1.0),
+      transform: Matrix4.diagonal3Values(flip ? -1.0 : 1.0, bottom ? -1.0 : 1.0, 1.0),
       alignment: Alignment.center,
       child: SizedBox(
         width: 20,

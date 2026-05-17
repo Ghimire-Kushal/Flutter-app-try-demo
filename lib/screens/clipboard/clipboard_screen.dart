@@ -65,13 +65,12 @@ class _ClipboardScreenState extends State<ClipboardScreen> {
           TextButton.icon(
             onPressed: () async {
               final data = await Clipboard.getData('text/plain');
+              if (!mounted) return;
               if (data?.text != null) {
                 provider.addItem(data!.text!);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Pasted from clipboard')),
-                  );
-                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Pasted from clipboard')),
+                );
               }
             },
             icon: const Icon(Icons.content_paste_rounded, size: 16),
