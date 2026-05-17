@@ -27,6 +27,11 @@ dependencies:
   share_plus: ^10.1.4
   path_provider: ^2.1.5
   mobile_scanner: ^6.0.0
+  flutter_local_notifications: ^18.0.0
+  timezone: ^0.10.0
+  geolocator: ^13.0.0
+  http: ^1.2.0
+  nepali_utils: ^3.0.8
   syncfusion_flutter_pdf: ^28.2.12
 
 dev_dependencies:

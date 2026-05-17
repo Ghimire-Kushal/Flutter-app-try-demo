@@ -3,8 +3,9 @@ class Task {
   String title;
   String description;
   bool isCompleted;
-  int priority; // 1=low, 2=medium, 3=high
+  int priority; // 0=low, 1=medium, 2=high
   DateTime? dueDate;
+  DateTime? reminderTime;
   final DateTime createdAt;
 
   Task({
@@ -14,6 +15,7 @@ class Task {
     this.isCompleted = false,
     this.priority = 1,
     this.dueDate,
+    this.reminderTime,
     required this.createdAt,
   });
 
@@ -24,6 +26,7 @@ class Task {
         'isCompleted': isCompleted,
         'priority': priority,
         'dueDate': dueDate?.toIso8601String(),
+        'reminderTime': reminderTime?.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
       };
 
@@ -33,7 +36,12 @@ class Task {
         description: json['description'] as String? ?? '',
         isCompleted: json['isCompleted'] as bool? ?? false,
         priority: json['priority'] as int? ?? 1,
-        dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate'] as String) : null,
+        dueDate: json['dueDate'] != null
+            ? DateTime.parse(json['dueDate'] as String)
+            : null,
+        reminderTime: json['reminderTime'] != null
+            ? DateTime.parse(json['reminderTime'] as String)
+            : null,
         createdAt: DateTime.parse(json['createdAt'] as String),
       );
 }

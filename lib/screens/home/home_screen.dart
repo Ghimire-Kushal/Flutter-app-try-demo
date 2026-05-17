@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
-import '../../providers/notes_provider.dart';
-import '../../providers/todo_provider.dart';
-import '../../providers/expense_provider.dart';
 import '../../widgets/feature_card.dart';
+import '../../widgets/dashboard_card.dart';
 import '../notes/notes_screen.dart';
 import '../todo/todo_screen.dart';
 import '../expense/expense_screen.dart';
@@ -58,7 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (_isSearching && _searchQuery.isNotEmpty)
             _buildSearchResults(context)
           else ...[
-            SliverToBoxAdapter(child: _buildStatsRow(context)),
+            const SliverToBoxAdapter(child: DashboardCard()),
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -148,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   _greeting(),
-                  style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.5)),
+                  style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.5)),
                 ),
                 const Text(
                   'All in One',
@@ -172,76 +168,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(width: 4),
       ],
-    );
-  }
-
-  Widget _buildStatsRow(BuildContext context) {
-    final notes = context.watch<NotesProvider>().notes.length;
-    final tasks = context.watch<TodoProvider>().pending.length;
-    final today = context.watch<ExpenseProvider>().totalToday;
-    final now = DateTime.now();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFF5C6BC0),
-              const Color(0xFF3949AB),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    DateFormat('EEEE, MMM d').format(now),
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    DateFormat('h:mm a').format(now),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            _buildStatChip(Icons.sticky_note_2_outlined, '$notes', 'Notes'),
-            const SizedBox(width: 8),
-            _buildStatChip(Icons.task_alt_rounded, '$tasks', 'Tasks'),
-            const SizedBox(width: 8),
-            _buildStatChip(Icons.account_balance_wallet_outlined, 'Rs${today.toInt()}', 'Today'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatChip(IconData icon, String value, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 9)),
-        ],
-      ),
     );
   }
 

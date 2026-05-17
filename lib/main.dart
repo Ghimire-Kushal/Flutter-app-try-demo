@@ -10,10 +10,12 @@ import 'providers/expense_provider.dart';
 import 'providers/clipboard_provider.dart';
 import 'providers/password_vault_provider.dart';
 import 'screens/main_screen.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await NotificationService().init();
   runApp(
     MultiProvider(
       providers: [
