@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 class QrScreen extends StatefulWidget {
   const QrScreen({super.key});
@@ -79,7 +80,7 @@ class _QrScreenState extends State<QrScreen> with SingleTickerProviderStateMixin
         controller: _tab,
         children: [
           _buildGenerator(context),
-          _buildScanner(context),
+          const _QrScannerTab(),
         ],
       ),
     );
@@ -125,7 +126,7 @@ class _QrScreenState extends State<QrScreen> with SingleTickerProviderStateMixin
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
-                        BoxShadow(color: cs.primary.withOpacity(0.1), blurRadius: 20),
+                        BoxShadow(color: cs.primary.withValues(alpha: 0.1), blurRadius: 20),
                       ],
                     ),
                     child: QrImageView(
@@ -221,72 +222,6 @@ class _QrScreenState extends State<QrScreen> with SingleTickerProviderStateMixin
     }
   }
 
-  Widget _buildScanner(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Stack(
-                children: [
-                  Center(child: Icon(Icons.qr_code_scanner_rounded, size: 80, color: cs.onPrimaryContainer.withOpacity(0.4))),
-                  Positioned(top: 20, left: 20, child: _corner()),
-                  Positioned(top: 20, right: 20, child: _corner(flip: true)),
-                  Positioned(bottom: 20, left: 20, child: _corner(bottom: true)),
-                  Positioned(bottom: 20, right: 20, child: _corner(flip: true, bottom: true)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'QR Scanner',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Camera scanning requires the mobile_scanner package. Add it to pubspec.yaml and implement MobileScannerController to enable this feature.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey[500], height: 1.5),
-            ),
-            const SizedBox(height: 24),
-            OutlinedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Add mobile_scanner to pubspec.yaml to enable scanning')),
-                );
-              },
-              icon: const Icon(Icons.camera_alt_rounded),
-              label: const Text('Open Camera'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _corner({bool flip = false, bool bottom = false}) {
-    return Transform(
-      transform: Matrix4.diagonal3Values(flip ? -1.0 : 1.0, bottom ? -1.0 : 1.0, 1.0),
-      alignment: Alignment.center,
-      child: SizedBox(
-        width: 20,
-        height: 20,
-        child: CustomPaint(
-          painter: _CornerPainter(Theme.of(context).colorScheme.primary),
-        ),
-      ),
-    );
-  }
-
   Widget _typeChip(String label, String value, IconData icon) {
     final isSelected = _qrType == value;
     final cs = Theme.of(context).colorScheme;
@@ -322,24 +257,302 @@ class _QrScreenState extends State<QrScreen> with SingleTickerProviderStateMixin
   }
 }
 
-class _CornerPainter extends CustomPainter {
-  final Color color;
-  _CornerPainter(this.color);
+// ─── QR Scanner Tab ────────────────────────────────────────────────────────────
+
+class _QrScannerTab extends StatefulWidget {
+  const _QrScannerTab();
+
+  @override
+  State<_QrScannerTab> createState() => _QrScannerTabState();
+}
+
+class _QrScannerTabState extends State<_QrScannerTab> with WidgetsBindingObserver {
+  late final MobileScannerController _controller;
+  String? _scannedValue;
+  bool _torchOn = false;
+  bool _paused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _controller = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      torchEnabled: false,
+    );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _controller.stop();
+    } else if (state == AppLifecycleState.resumed && !_paused) {
+      _controller.start();
+    }
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    final barcode = capture.barcodes.firstOrNull;
+    if (barcode == null || barcode.rawValue == null) return;
+    final value = barcode.rawValue!;
+    if (value == _scannedValue) return;
+
+    setState(() {
+      _scannedValue = value;
+      _paused = true;
+    });
+    _controller.stop();
+    _showResultSheet(value);
+  }
+
+  void _showResultSheet(String value) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _ScanResultSheet(value: value),
+    ).then((_) {
+      setState(() {
+        _scannedValue = null;
+        _paused = false;
+      });
+      _controller.start();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Stack(
+      children: [
+        // Camera view
+        MobileScanner(
+          controller: _controller,
+          onDetect: _onDetect,
+        ),
+
+        // Overlay with scan frame
+        CustomPaint(
+          painter: _ScanOverlayPainter(cs.primary),
+          child: const SizedBox.expand(),
+        ),
+
+        // Top controls
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                _OverlayButton(
+                  icon: _torchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                  onTap: () {
+                    _controller.toggleTorch();
+                    setState(() => _torchOn = !_torchOn);
+                  },
+                ),
+                const SizedBox(width: 8),
+                _OverlayButton(
+                  icon: Icons.flip_camera_ios_rounded,
+                  onTap: () => _controller.switchCamera(),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Bottom hint
+        Positioned(
+          bottom: 40,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Point camera at a QR code',
+                style: TextStyle(color: Colors.white, fontSize: 13),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OverlayButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _OverlayButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.black54,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: Colors.white, size: 22),
+      ),
+    );
+  }
+}
+
+class _ScanOverlayPainter extends CustomPainter {
+  final Color accentColor;
+  _ScanOverlayPainter(this.accentColor);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
+    final dimPaint = Paint()..color = Colors.black54;
+    final clearPaint = Paint()..blendMode = BlendMode.clear;
+    final cornerPaint = Paint()
+      ..color = accentColor
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    final path = Path()
-      ..moveTo(0, size.height)
-      ..lineTo(0, 0)
-      ..lineTo(size.width, 0);
-    canvas.drawPath(path, paint);
+
+    const boxSize = 240.0;
+    const cornerLen = 24.0;
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final left = cx - boxSize / 2;
+    final top = cy - boxSize / 2;
+    final right = left + boxSize;
+    final bottom = top + boxSize;
+    const r = 12.0;
+
+    // Dim overlay with a clear hole
+    canvas.saveLayer(Offset.zero & size, Paint());
+    canvas.drawRect(Offset.zero & size, dimPaint);
+    canvas.drawRRect(RRect.fromLTRBR(left, top, right, bottom, const Radius.circular(r)), clearPaint);
+    canvas.restore();
+
+    // Corner brackets
+    final corners = [
+      [Offset(left + r, top), Offset(left, top + r), cornerLen],
+      [Offset(right - r, top), Offset(right, top + r), cornerLen],
+      [Offset(left + r, bottom), Offset(left, bottom - r), cornerLen],
+      [Offset(right - r, bottom), Offset(right, bottom - r), cornerLen],
+    ];
+
+    for (final c in corners) {
+      final h = c[0] as Offset;
+      final v = c[1] as Offset;
+      final len = c[2] as double;
+      final hDir = Offset((h.dx < cx ? 1 : -1) * len, 0);
+      final vDir = Offset(0, (v.dy < cy ? 1 : -1) * len);
+      canvas.drawLine(h, h + hDir, cornerPaint);
+      canvas.drawLine(v, v + vDir, cornerPaint);
+    }
   }
 
   @override
   bool shouldRepaint(_) => false;
+}
+
+class _ScanResultSheet extends StatelessWidget {
+  final String value;
+  const _ScanResultSheet({required this.value});
+
+  bool get _isUrl => value.startsWith('http://') || value.startsWith('https://');
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4)),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(color: cs.primaryContainer, shape: BoxShape.circle),
+            child: Icon(Icons.qr_code_rounded, color: cs.primary, size: 28),
+          ),
+          const SizedBox(height: 12),
+          const Text('QR Code Scanned', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 13, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.copy_rounded, size: 16),
+                  label: const Text('Copy'),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: value));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Copied to clipboard')),
+                    );
+                  },
+                ),
+              ),
+              if (_isUrl) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.open_in_browser_rounded, size: 16),
+                    label: const Text('Open URL'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('URL: $value')),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Scan Again'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

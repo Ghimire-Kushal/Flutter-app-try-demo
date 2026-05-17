@@ -21,6 +21,13 @@ dependencies:
   fl_chart: ^0.69.0
   qr_flutter: ^4.1.0
   uuid: ^4.5.1
+  pdf: ^3.11.1
+  image_picker: ^1.1.2
+  file_picker: ^8.1.7
+  share_plus: ^10.1.4
+  path_provider: ^2.1.5
+  mobile_scanner: ^6.0.0
+  syncfusion_flutter_pdf: ^28.2.12
 
 dev_dependencies:
   flutter_test:

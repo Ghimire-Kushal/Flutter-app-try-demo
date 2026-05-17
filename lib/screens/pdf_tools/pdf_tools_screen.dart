@@ -1,4 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class PdfToolsScreen extends StatelessWidget {
   const PdfToolsScreen({super.key});
@@ -7,11 +13,11 @@ class PdfToolsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tools = [
-      _Tool('Image to PDF', 'Convert photos to PDF document', Icons.image_rounded, const Color(0xFFF57C00)),
-      _Tool('Merge PDF', 'Combine multiple PDFs into one', Icons.merge_type_rounded, const Color(0xFF5C6BC0)),
-      _Tool('Compress PDF', 'Reduce PDF file size', Icons.compress_rounded, const Color(0xFF26A69A)),
-      _Tool('Scan Document', 'Scan physical documents', Icons.document_scanner_rounded, const Color(0xFFEC407A)),
-      _Tool('Share PDF', 'Share PDF via any app', Icons.share_rounded, const Color(0xFF42A5F5)),
+      _Tool('Image to PDF', 'Convert photos to PDF document', Icons.image_rounded, const Color(0xFFF57C00), true),
+      _Tool('Merge PDF', 'Combine multiple PDFs into one', Icons.merge_type_rounded, const Color(0xFF5C6BC0), false),
+      _Tool('Compress PDF', 'Reduce PDF file size', Icons.compress_rounded, const Color(0xFF26A69A), false),
+      _Tool('Scan Document', 'Scan physical documents', Icons.document_scanner_rounded, const Color(0xFFEC407A), false),
+      _Tool('Share PDF', 'Share PDF via any app', Icons.share_rounded, const Color(0xFF42A5F5), false),
     ];
 
     return Scaffold(
@@ -23,26 +29,6 @@ class PdfToolsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline_rounded, color: cs.primary, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "PDF features require additional packages (pdf, image_picker, share_plus). The UI is ready — tap any tool to see what's needed.",
-                      style: TextStyle(fontSize: 12, color: cs.onPrimaryContainer, height: 1.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
             ...tools.map((tool) => _buildToolCard(context, tool, cs)),
           ],
         ),
@@ -57,7 +43,7 @@ class PdfToolsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1C1F2A) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: tool.color.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 3))],
+        boxShadow: [BoxShadow(color: tool.color.withValues(alpha:0.08), blurRadius: 8, offset: const Offset(0, 3))],
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
@@ -65,18 +51,39 @@ class PdfToolsScreen extends StatelessWidget {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: tool.color.withOpacity(0.12),
+            color: tool.color.withValues(alpha:0.12),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Icon(tool.icon, color: tool.color, size: 26),
         ),
-        title: Text(tool.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+        title: Row(
+          children: [
+            Text(tool.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+            if (tool.implemented) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha:0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text('Ready', style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ],
+        ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(tool.description, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
         ),
         trailing: Icon(Icons.arrow_forward_ios_rounded, size: 13, color: Colors.grey[400]),
-        onTap: () => _showComingSoon(context, tool.name, tool.color),
+        onTap: () {
+          if (tool.name == 'Image to PDF') {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ImageToPdfScreen()));
+          } else {
+            _showComingSoon(context, tool.name, tool.color);
+          }
+        },
       ),
     );
   }
@@ -94,14 +101,14 @@ class PdfToolsScreen extends StatelessWidget {
             Container(
               width: 60,
               height: 60,
-              decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle),
+              decoration: BoxDecoration(color: color.withValues(alpha:0.12), shape: BoxShape.circle),
               child: Icon(Icons.construction_rounded, color: color, size: 30),
             ),
             const SizedBox(height: 16),
             Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             const Text(
-              'This feature requires the following packages:\n• pdf\n• image_picker\n• share_plus\n\nAdd them to pubspec.yaml and implement the functionality.',
+              'This feature is coming soon!',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, height: 1.6),
             ),
@@ -124,5 +131,316 @@ class _Tool {
   final String name, description;
   final IconData icon;
   final Color color;
-  _Tool(this.name, this.description, this.icon, this.color);
+  final bool implemented;
+  _Tool(this.name, this.description, this.icon, this.color, this.implemented);
+}
+
+// ─── Image to PDF Screen ───────────────────────────────────────────────────────
+
+class ImageToPdfScreen extends StatefulWidget {
+  const ImageToPdfScreen({super.key});
+
+  @override
+  State<ImageToPdfScreen> createState() => _ImageToPdfScreenState();
+}
+
+class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
+  final List<File> _images = [];
+  bool _isConverting = false;
+  String? _pdfPath;
+
+  Future<void> _pickImages() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickMultiImage(imageQuality: 90);
+    if (picked.isNotEmpty) {
+      setState(() {
+        _images.addAll(picked.map((x) => File(x.path)));
+        _pdfPath = null;
+      });
+    }
+  }
+
+  Future<void> _pickFromCamera() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 90);
+    if (picked != null) {
+      setState(() {
+        _images.add(File(picked.path));
+        _pdfPath = null;
+      });
+    }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      _images.removeAt(index);
+      _pdfPath = null;
+    });
+  }
+
+  void _reorder(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) newIndex--;
+      final img = _images.removeAt(oldIndex);
+      _images.insert(newIndex, img);
+      _pdfPath = null;
+    });
+  }
+
+  Future<void> _convertToPdf() async {
+    if (_images.isEmpty) return;
+    setState(() => _isConverting = true);
+
+    try {
+      final doc = pw.Document();
+      for (final file in _images) {
+        final bytes = await file.readAsBytes();
+        final image = pw.MemoryImage(bytes);
+        doc.addPage(
+          pw.Page(
+            pageFormat: PdfPageFormat.a4,
+            margin: pw.EdgeInsets.zero,
+            build: (ctx) => pw.Center(
+              child: pw.Image(image, fit: pw.BoxFit.contain),
+            ),
+          ),
+        );
+      }
+
+      final dir = await getTemporaryDirectory();
+      final fileName = 'images_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final outFile = File('${dir.path}/$fileName');
+      await outFile.writeAsBytes(await doc.save());
+
+      setState(() {
+        _pdfPath = outFile.path;
+        _isConverting = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF created successfully!'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      setState(() => _isConverting = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _sharePdf() async {
+    if (_pdfPath == null) return;
+    await Share.shareXFiles([XFile(_pdfPath!)], text: 'PDF created with PDF Tools');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Image to PDF', style: TextStyle(fontWeight: FontWeight.w700)),
+        actions: [
+          if (_pdfPath != null)
+            IconButton(
+              icon: const Icon(Icons.share_rounded),
+              tooltip: 'Share PDF',
+              onPressed: _sharePdf,
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Toolbar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.photo_library_rounded,
+                    label: 'Gallery',
+                    color: const Color(0xFFF57C00),
+                    onTap: _pickImages,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.camera_alt_rounded,
+                    label: 'Camera',
+                    color: const Color(0xFF5C6BC0),
+                    onTap: _pickFromCamera,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Images grid
+          Expanded(
+            child: _images.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.image_outlined, size: 64, color: Colors.grey[400]),
+                        const SizedBox(height: 12),
+                        Text('No images selected', style: TextStyle(color: Colors.grey[500])),
+                        const SizedBox(height: 4),
+                        Text('Tap Gallery or Camera to add images',
+                            style: TextStyle(color: Colors.grey[400], fontSize: 12)),
+                      ],
+                    ),
+                  )
+                : ReorderableListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _images.length,
+                    onReorder: _reorder,
+                    itemBuilder: (ctx, i) {
+                      return _ImageTile(
+                        key: ValueKey(_images[i].path),
+                        file: _images[i],
+                        index: i,
+                        onRemove: () => _removeImage(i),
+                        isDark: isDark,
+                      );
+                    },
+                  ),
+          ),
+
+          // Bottom bar
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_images.isNotEmpty)
+                    Text('${_images.length} image${_images.length == 1 ? '' : 's'} • drag to reorder',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      if (_pdfPath != null) ...[
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.share_rounded),
+                            label: const Text('Share PDF'),
+                            onPressed: _sharePdf,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      Expanded(
+                        child: FilledButton.icon(
+                          icon: _isConverting
+                              ? const SizedBox(width: 16, height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.picture_as_pdf_rounded),
+                          label: Text(_isConverting ? 'Converting…' : 'Convert to PDF'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFF57C00),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: (_images.isEmpty || _isConverting) ? null : _convertToPdf,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionButton({required this.icon, required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageTile extends StatelessWidget {
+  final File file;
+  final int index;
+  final VoidCallback onRemove;
+  final bool isDark;
+
+  const _ImageTile({super.key, required this.file, required this.index, required this.onRemove, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1C1F2A) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.06), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
+            child: Image.file(file, width: 80, height: 80, fit: BoxFit.cover),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Page ${index + 1}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 2),
+                Text(file.path.split('/').last,
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
+            onPressed: onRemove,
+          ),
+          const Icon(Icons.drag_handle_rounded, color: Colors.grey, size: 20),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
 }
