@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'notes/notes_screen.dart';
 import 'todo/todo_screen.dart';
 import 'expense/expense_screen.dart';
-import 'attendance/attendance_screen.dart';
 import '../core/theme/app_theme.dart';
 
 class ProductivityTab extends StatelessWidget {
@@ -43,15 +42,6 @@ class ProductivityTab extends StatelessWidget {
             Icons.account_balance_wallet_rounded,
             AppColors.expense,
             const ExpenseScreen(),
-          ),
-          const SizedBox(height: 12),
-          _buildBigCard(
-            context,
-            'Attendance Calculator',
-            'Track subject-wise attendance',
-            Icons.bar_chart_rounded,
-            AppColors.attendance,
-            const AttendanceScreen(),
           ),
         ],
       ),

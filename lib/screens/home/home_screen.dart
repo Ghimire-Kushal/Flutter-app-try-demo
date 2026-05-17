@@ -255,12 +255,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: GridView.count(
-        crossAxisCount: 2,
+        crossAxisCount: 3,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.3,
+        childAspectRatio: 0.95,
         children: items.map((item) => FeatureCard(
           label: item.label,
           icon: item.icon,
