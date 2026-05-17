@@ -9,7 +9,6 @@ import '../../widgets/feature_card.dart';
 import '../notes/notes_screen.dart';
 import '../todo/todo_screen.dart';
 import '../expense/expense_screen.dart';
-import '../attendance/attendance_screen.dart';
 import '../utilities/utilities_hub_screen.dart';
 import '../utilities/date_converter_screen.dart';
 import '../utilities/stopwatch_screen.dart';

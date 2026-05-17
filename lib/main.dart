@@ -7,7 +7,6 @@ import 'providers/theme_provider.dart';
 import 'providers/notes_provider.dart';
 import 'providers/todo_provider.dart';
 import 'providers/expense_provider.dart';
-import 'providers/attendance_provider.dart';
 import 'providers/clipboard_provider.dart';
 import 'providers/password_vault_provider.dart';
 import 'screens/main_screen.dart';
@@ -22,7 +21,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => NotesProvider()),
         ChangeNotifierProvider(create: (_) => TodoProvider()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()),
-        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
         ChangeNotifierProvider(create: (_) => ClipboardProvider()),
         ChangeNotifierProvider(create: (_) => PasswordVaultProvider()),
       ],
