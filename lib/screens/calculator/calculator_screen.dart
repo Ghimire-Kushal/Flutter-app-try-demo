@@ -57,7 +57,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       case '%': result = _operand1 * op2 / 100; break;
     }
     setState(() {
-      _expression = '${_expression} ${_fmt(op2)} =';
+      _expression = '$_expression ${_fmt(op2)} =';
       _display = _fmt(result);
       _operator = '';
       _newInput = true;
@@ -98,9 +98,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Calculator', style: TextStyle(fontWeight: FontWeight.w700)),
