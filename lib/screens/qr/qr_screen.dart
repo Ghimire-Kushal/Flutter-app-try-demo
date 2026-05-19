@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -18,8 +20,6 @@ class _QrScreenState extends State<QrScreen> with SingleTickerProviderStateMixin
   final _ssidCtrl = TextEditingController();
   final _wifiPwCtrl = TextEditingController();
   final _urlCtrl = TextEditingController();
-  final _esewaCtrl = TextEditingController();
-  final _esewaAmtCtrl = TextEditingController();
 
   String _qrData = '';
   String _qrType = 'text';
@@ -37,8 +37,6 @@ class _QrScreenState extends State<QrScreen> with SingleTickerProviderStateMixin
     _ssidCtrl.dispose();
     _wifiPwCtrl.dispose();
     _urlCtrl.dispose();
-    _esewaCtrl.dispose();
-    _esewaAmtCtrl.dispose();
     super.dispose();
   }
 
@@ -54,10 +52,6 @@ class _QrScreenState extends State<QrScreen> with SingleTickerProviderStateMixin
       case 'wifi':
         if (_ssidCtrl.text.isEmpty) return;
         data = 'WIFI:S:${_ssidCtrl.text};T:WPA;P:${_wifiPwCtrl.text};;';
-        break;
-      case 'esewa':
-        if (_esewaCtrl.text.isEmpty || _esewaAmtCtrl.text.isEmpty) return;
-        data = 'esewa://p2p?receiver=${_esewaCtrl.text}&amount=${_esewaAmtCtrl.text}';
         break;
     }
     if (data.isNotEmpty) setState(() => _qrData = data);
@@ -101,7 +95,6 @@ class _QrScreenState extends State<QrScreen> with SingleTickerProviderStateMixin
               _typeChip('Text', 'text', Icons.text_fields_rounded),
               _typeChip('URL', 'url', Icons.link_rounded),
               _typeChip('WiFi', 'wifi', Icons.wifi_rounded),
-              _typeChip('eSewa', 'esewa', Icons.payments_rounded),
             ],
           ),
           const SizedBox(height: 20),
@@ -187,28 +180,6 @@ class _QrScreenState extends State<QrScreen> with SingleTickerProviderStateMixin
             ),
           ],
         );
-      case 'esewa':
-        return Column(
-          children: [
-            TextField(
-              controller: _esewaCtrl,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'eSewa ID / Phone Number',
-                prefixIcon: Icon(Icons.phone_rounded),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _esewaAmtCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Amount (Rs)',
-                prefixIcon: Icon(Icons.payments_rounded),
-              ),
-            ),
-          ],
-        );
       default:
         return TextField(
           controller: _textCtrl,
@@ -271,6 +242,7 @@ class _QrScannerTabState extends State<_QrScannerTab> with WidgetsBindingObserve
   String? _scannedValue;
   bool _torchOn = false;
   bool _paused = false;
+  File? _galleryImage;
 
   @override
   void initState() {
@@ -281,6 +253,27 @@ class _QrScannerTabState extends State<_QrScannerTab> with WidgetsBindingObserve
       facing: CameraFacing.back,
       torchEnabled: false,
     );
+  }
+
+  Future<void> _pickFromGallery() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    setState(() => _galleryImage = File(picked.path));
+    final result = await _controller.analyzeImage(picked.path);
+    if (!mounted) return;
+    if (result != null && result.barcodes.isNotEmpty) {
+      final value = result.barcodes.first.rawValue;
+      if (value != null) {
+        _showResultSheet(value);
+        return;
+      }
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No QR code found in the image')),
+      );
+      setState(() => _galleryImage = null);
+    }
   }
 
   @override
@@ -324,6 +317,7 @@ class _QrScannerTabState extends State<_QrScannerTab> with WidgetsBindingObserve
       setState(() {
         _scannedValue = null;
         _paused = false;
+        _galleryImage = null;
       });
       _controller.start();
     });
@@ -334,17 +328,35 @@ class _QrScannerTabState extends State<_QrScannerTab> with WidgetsBindingObserve
     final cs = Theme.of(context).colorScheme;
     return Stack(
       children: [
-        // Camera view
+        // Camera view (always running in background)
         MobileScanner(
           controller: _controller,
           onDetect: _onDetect,
         ),
 
-        // Overlay with scan frame
-        CustomPaint(
-          painter: _ScanOverlayPainter(cs.primary),
-          child: const SizedBox.expand(),
-        ),
+        // Gallery image preview overlay
+        if (_galleryImage != null)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black87,
+              child: Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.file(_galleryImage!,
+                      fit: BoxFit.contain,
+                      width: 280,
+                      height: 280),
+                ),
+              ),
+            ),
+          ),
+
+        // Overlay with scan frame (only when camera is active)
+        if (_galleryImage == null)
+          CustomPaint(
+            painter: _ScanOverlayPainter(cs.primary),
+            child: const SizedBox.expand(),
+          ),
 
         // Top controls
         SafeArea(
@@ -362,8 +374,8 @@ class _QrScannerTabState extends State<_QrScannerTab> with WidgetsBindingObserve
                 ),
                 const SizedBox(width: 8),
                 _OverlayButton(
-                  icon: Icons.flip_camera_ios_rounded,
-                  onTap: () => _controller.switchCamera(),
+                  icon: Icons.photo_library_rounded,
+                  onTap: _pickFromGallery,
                 ),
               ],
             ),
@@ -382,9 +394,11 @@ class _QrScannerTabState extends State<_QrScannerTab> with WidgetsBindingObserve
                 color: Colors.black54,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Text(
-                'Point camera at a QR code',
-                style: TextStyle(color: Colors.white, fontSize: 13),
+              child: Text(
+                _galleryImage != null
+                    ? 'Scanning image…'
+                    : 'Point camera at a QR code',
+                style: const TextStyle(color: Colors.white, fontSize: 13),
               ),
             ),
           ),

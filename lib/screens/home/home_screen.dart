@@ -35,13 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -139,18 +132,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               onChanged: (v) => setState(() => _searchQuery = v),
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _greeting(),
-                  style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.5)),
-                ),
-                const Text(
-                  'All in One',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-                ),
-              ],
+          : const Text(
+              'All in One',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
             ),
       actions: [
         if (!_isSearching)
@@ -230,9 +214,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildDocumentsGrid(BuildContext context) {
     final items = [
-      _FeatureItem('QR Scanner\n& Generator', Icons.qr_code_2_rounded, AppColors.qr, () => _navigateTo(context, const QrScreen())),
+      _FeatureItem('QR Code', Icons.qr_code_2_rounded, AppColors.qr, () => _navigateTo(context, const QrScreen())),
       _FeatureItem('PDF Tools', Icons.picture_as_pdf_rounded, AppColors.pdf, () => _navigateTo(context, const PdfToolsScreen())),
-      _FeatureItem('Clipboard\nHistory', Icons.content_paste_rounded, AppColors.clipboard, () => _navigateTo(context, const ClipboardScreen())),
+      _FeatureItem('Clipboard', Icons.content_paste_rounded, AppColors.clipboard, () => _navigateTo(context, const ClipboardScreen())),
     ];
 
     return Padding(

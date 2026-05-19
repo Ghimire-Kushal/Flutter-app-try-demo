@@ -28,10 +28,14 @@ class _SignupScreenState extends State<SignupScreen> {
     if (_emailCtrl.text.trim().isEmpty || _passwordCtrl.text.isEmpty) return;
     setState(() => _loading = true);
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text.trim(),
       );
+      final name = _nameCtrl.text.trim();
+      if (name.isNotEmpty) {
+        await cred.user?.updateDisplayName(name);
+      }
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,

@@ -1,23 +1,65 @@
+import 'dart:async';
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../models/expense.dart';
 
 class ExpenseProvider extends ChangeNotifier {
-  static const _key = 'expense_data';
+  static const _prefKey = 'expense_data';
   final _uuid = const Uuid();
   List<Expense> _expenses = [];
+  String? _uid;
+  StreamSubscription<QuerySnapshot>? _fsSub;
 
   List<Expense> get expenses => _expenses;
 
   ExpenseProvider() {
     _load();
+    FirebaseAuth.instance.authStateChanges().listen(_onAuthChanged);
+  }
+
+  @override
+  void dispose() {
+    _fsSub?.cancel();
+    super.dispose();
+  }
+
+  CollectionReference<Map<String, dynamic>> _col(String uid) =>
+      FirebaseFirestore.instance.collection('users').doc(uid).collection('expenses');
+
+  void _onAuthChanged(User? user) async {
+    await _fsSub?.cancel();
+    _fsSub = null;
+    _uid = user?.uid;
+    if (user == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final syncKey = 'expenses_synced_${user.uid}';
+    final hasSynced = prefs.getBool(syncKey) ?? false;
+
+    if (!hasSynced && _expenses.isNotEmpty) {
+      final batch = FirebaseFirestore.instance.batch();
+      for (final e in _expenses) {
+        batch.set(_col(user.uid).doc(e.id), e.toJson());
+      }
+      await batch.commit();
+    }
+    await prefs.setBool(syncKey, true);
+
+    _fsSub = _col(user.uid).snapshots().listen((snap) {
+      _expenses = snap.docs.map((d) => Expense.fromJson(d.data())).toList();
+      _expenses.sort((a, b) => b.date.compareTo(a.date));
+      notifyListeners();
+      _saveLocal();
+    });
   }
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_key);
+    final raw = prefs.getString(_prefKey);
     if (raw != null) {
       final list = jsonDecode(raw) as List;
       _expenses = list.map((e) => Expense.fromJson(e as Map<String, dynamic>)).toList();
@@ -26,42 +68,62 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _save() async {
+  Future<void> _saveLocal() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, jsonEncode(_expenses.map((e) => e.toJson()).toList()));
+    await prefs.setString(_prefKey, jsonEncode(_expenses.map((e) => e.toJson()).toList()));
   }
 
-  Future<void> addExpense(String title, double amount, ExpenseCategory category, {String note = '', DateTime? date}) async {
-    _expenses.insert(0, Expense(
+  Future<void> _saveRemote(Expense expense) async {
+    if (_uid == null) return;
+    await _col(_uid!).doc(expense.id).set(expense.toJson());
+  }
+
+  Future<void> _deleteRemote(String id) async {
+    if (_uid == null) return;
+    await _col(_uid!).doc(id).delete();
+  }
+
+  Future<void> addExpense(
+    String title,
+    double amount,
+    ExpenseCategory category, {
+    String note = '',
+    DateTime? date,
+  }) async {
+    final expense = Expense(
       id: _uuid.v4(),
       title: title,
       amount: amount,
       category: category,
       date: date ?? DateTime.now(),
       note: note,
-    ));
+    );
+    _expenses.insert(0, expense);
     notifyListeners();
-    await _save();
+    await _saveLocal();
+    await _saveRemote(expense);
   }
 
   Future<void> deleteExpense(String id) async {
     _expenses.removeWhere((e) => e.id == id);
     notifyListeners();
-    await _save();
+    await _saveLocal();
+    await _deleteRemote(id);
   }
 
-  List<Expense> getByMonth(int year, int month) {
-    return _expenses.where((e) => e.date.year == year && e.date.month == month).toList();
-  }
+  List<Expense> getByMonth(int year, int month) =>
+      _expenses.where((e) => e.date.year == year && e.date.month == month).toList();
 
-  double totalByMonth(int year, int month) {
-    return getByMonth(year, month).fold(0.0, (sum, e) => sum + e.amount);
-  }
+  double totalByMonth(int year, int month) =>
+      getByMonth(year, month).fold(0.0, (sum, e) => sum + e.amount);
 
   double get totalToday {
     final now = DateTime.now();
     return _expenses
-        .where((e) => e.date.year == now.year && e.date.month == now.month && e.date.day == now.day)
+        .where((e) =>
+            e.date.year == now.year &&
+            e.date.month == now.month &&
+            e.date.day == now.day)
         .fold(0.0, (sum, e) => sum + e.amount);
   }
 

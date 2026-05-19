@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../auth/login_screen.dart';
 
@@ -9,6 +10,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeProvider>();
+    final auth = context.watch<AppAuthProvider>();
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -18,7 +20,7 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _profileCard(context, cs),
+          _profileCard(context, cs, auth),
           const SizedBox(height: 24),
           _sectionLabel('Appearance'),
           const SizedBox(height: 10),
@@ -26,8 +28,10 @@ class SettingsScreen extends StatelessWidget {
             context,
             title: 'Dark Mode',
             subtitle: theme.isDark ? 'Dark theme active' : 'Light theme active',
-            leading: Icon(theme.isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                color: cs.primary),
+            leading: Icon(
+              theme.isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              color: cs.primary,
+            ),
             trailing: Switch.adaptive(
               value: theme.isDark,
               onChanged: (_) => theme.toggle(),
@@ -36,16 +40,31 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 24),
           _sectionLabel('Account'),
           const SizedBox(height: 10),
-          _settingsTile(
-            context,
-            title: 'Sign In',
-            subtitle: 'Sign in with your account',
-            leading: Icon(Icons.person_rounded, color: cs.primary),
-            onTap: () => Navigator.push(
+          if (auth.isSignedIn) ...[
+            _settingsTile(
               context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              title: 'Signed in as',
+              subtitle: auth.email,
+              leading: Icon(Icons.person_rounded, color: cs.primary),
             ),
-          ),
+            _settingsTile(
+              context,
+              title: 'Sign Out',
+              subtitle: 'Sign out of your account',
+              leading: Icon(Icons.logout_rounded, color: Colors.redAccent),
+              onTap: () => _confirmSignOut(context, auth),
+            ),
+          ] else
+            _settingsTile(
+              context,
+              title: 'Sign In',
+              subtitle: 'Sign in to sync your data across devices',
+              leading: Icon(Icons.person_rounded, color: cs.primary),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              ),
+            ),
           const SizedBox(height: 24),
           _sectionLabel('About'),
           const SizedBox(height: 10),
@@ -66,7 +85,30 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _profileCard(BuildContext context, ColorScheme cs) {
+  void _confirmSignOut(BuildContext context, AppAuthProvider auth) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await auth.signOut();
+            },
+            child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _profileCard(BuildContext context, ColorScheme cs, AppAuthProvider auth) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -85,15 +127,32 @@ class SettingsScreen extends StatelessWidget {
             child: const Icon(Icons.person_rounded, size: 32, color: Colors.white),
           ),
           const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Kushal',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
-              Text('All in One Super App',
-                  style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  auth.displayName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  auth.isSignedIn ? auth.email : 'Sign in to sync data',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -101,9 +160,14 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _sectionLabel(String text) => Text(
-    text.toUpperCase(),
-    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: Colors.grey),
-  );
+        text.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.2,
+          color: Colors.grey,
+        ),
+      );
 
   Widget _settingsTile(
     BuildContext context, {
@@ -122,9 +186,15 @@ class SettingsScreen extends StatelessWidget {
       ),
       child: ListTile(
         leading: leading,
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-        subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-        trailing: trailing ?? (onTap != null ? Icon(Icons.arrow_forward_ios_rounded, size: 13, color: Colors.grey[400]) : null),
+        title: Text(title,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+        subtitle: Text(subtitle,
+            style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+        trailing: trailing ??
+            (onTap != null
+                ? Icon(Icons.arrow_forward_ios_rounded,
+                    size: 13, color: Colors.grey[400])
+                : null),
         onTap: onTap,
       ),
     );

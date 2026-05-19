@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:nepali_utils/nepali_utils.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/auth_provider.dart';
 import '../providers/expense_provider.dart';
 import '../providers/notes_provider.dart';
 import '../providers/todo_provider.dart';
@@ -197,6 +198,7 @@ class _DashboardCardState extends State<DashboardCard>
     final notes = context.watch<NotesProvider>().notes.length;
     final tasks = context.watch<TodoProvider>().pending.length;
     final todayExpense = context.watch<ExpenseProvider>().totalToday;
+    final userName = context.watch<AppAuthProvider>().displayName;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final nepaliNow = NepaliDateTime.now();
@@ -235,6 +237,7 @@ class _DashboardCardState extends State<DashboardCard>
                   nepaliDate: nepaliDate,
                   greeting: _greeting(),
                   greetingIcon: _greetingIcon(),
+                  userName: userName,
                   weatherLoading: _weatherLoading,
                   temp: _temp,
                   feelsLike: _feelsLike,
@@ -268,6 +271,7 @@ class _TopSection extends StatelessWidget {
   final String nepaliDate;
   final String greeting;
   final IconData greetingIcon;
+  final String userName;
   final bool weatherLoading;
   final int? temp;
   final int? feelsLike;
@@ -282,6 +286,7 @@ class _TopSection extends StatelessWidget {
     required this.nepaliDate,
     required this.greeting,
     required this.greetingIcon,
+    required this.userName,
     required this.weatherLoading,
     required this.temp,
     required this.feelsLike,
@@ -311,13 +316,13 @@ class _TopSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Greeting
+        // Greeting with name
         Row(
           children: [
             Icon(greetingIcon, color: Colors.white54, size: 13),
             const SizedBox(width: 5),
             Text(
-              greeting,
+              '$greeting, $userName',
               style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 12,
